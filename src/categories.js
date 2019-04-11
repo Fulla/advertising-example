@@ -4,11 +4,16 @@ const router = express.Router();
 const Category = require('./models/category');
 
 router.get("/search/:name", (req, res, next) => {
-    search(req.param.name)
+    search(req.params.name)
     .then(
-        category => { res.send(category) }
+        category => { 
+            console.log(category);
+            res.send(category);
+        }
+    )
+    .catch(
+        err => { res.end(err) }
     );
-    next()
 });
 
 
@@ -25,28 +30,27 @@ module.exports = router;
 
 
 function search(name) {
-    Category.findOne({name: name})
+    return Category.findOne({name: name})
     .then(
         category => { 
+            if (!category) {
+                return `No category with name ${name}`
+            }
             console.log(category);
             return category;
         }
     )
     .catch(
-        error => { console.log(error) }
-    );
+        error => { 
+            console.log(error);
+            throw error;
+        }
+    )
 }
 
 
 function add(name) {
-    Category.findOne({name: name})
-    .then(
-        category => { 
-            console.log(category);
-            return category;
-        }
-    )
-    Category.create
+    Category.create({name:name})
     .catch(
         error => { console.log(error) }
     );

@@ -27,6 +27,7 @@ module.exports = router;
 
 function search(brandName) {
     Brand.findOne({name: brandName})
+    .populate('category')
     .then(
         (err, doc) => { 
             console.log(doc);
