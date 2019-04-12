@@ -14,8 +14,7 @@ const app = express();
 
 app.use(bodyParser.json())
 app.use('/category', categoriesRouter)
-// app.use('/brand', brandsRouter)
-// app.use('/user', filterRouter)
+app.use('/brand', brandsRouter)
 // app.use('/client', clientRouter);
 app.get('/', index)
 
