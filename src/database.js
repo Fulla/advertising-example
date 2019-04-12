@@ -5,10 +5,10 @@ const mongoHost = 'localhost';
 const database = 'advertising';
 
 function connect() {
-    mongoose.connect(`mongodb://${mongoHost}:${mongoPort}/${database}`)
+    return mongoose.connect(`mongodb://${mongoHost}:${mongoPort}/${database}`)
     .then(
         () => console.log("Connected to mongo"),
-        (err) => console.log(err)
+        (err) => {throw err}
     );
 }
 
