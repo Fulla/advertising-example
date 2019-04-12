@@ -126,7 +126,7 @@ function remove(name) {
             if (!brand) {
                 return `No brand with name ${name}`;
             }
-            return Brand.deleteOne({name:name})
+            return brand.remove()
             .then(
                 () => { return `Brand ${name} deleted` },
                 err => { throw new Error(err) }

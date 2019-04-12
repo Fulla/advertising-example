@@ -97,8 +97,8 @@ function remove(name) {
             if (!category) {
                 return `No category with name ${name}`;
             }
-            Brand.deleteMany({category: category._id}).exec();
-            return Category.deleteOne({name:name})
+            // Brand.deleteMany({category: category._id}).exec();
+            return category.remove()
             .then(
                 () => { return `Category ${name} deleted` },
                 err => { throw new Error(err) }

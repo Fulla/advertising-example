@@ -8,6 +8,13 @@ var schema = new Schema({
 });
 // here, for simplification, I'm assuming that a brand is just from a single category
 
+// hook to remove all related brand filters whenever a category is removed
+schema.pre('remove', function() {
+    var brand = this;
+    return brand.model('BrandFilter').remove({brand: brand._id});
+});
+
+
 schema.post('save', function(doc, next) {
     doc.populate('category', 'name -_id').execPopulate().then(function() {
         next();

@@ -7,4 +7,14 @@ var schema = new Schema({
 });
 
 
+schema.post('save', function(doc, next) {
+    doc
+    .populate('category', 'name -_id')
+    .populate('client', 'name -_id')
+    .execPopulate().then(function() {
+        next();
+    });
+});
+
+
 module.exports = mongoose.model('CategoryFilter', schema);
