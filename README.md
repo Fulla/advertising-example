@@ -1,13 +1,32 @@
 # Advertising Service
+### By Santiago Fulladoza
 
 ## Features:
 
 ### What does include
 
 - Get, create, edit and delete category
+    - `GET /category/:name`
+    - `POST /category`   with json `{"name": "categ_name", "description": "" }`
+    - `PUT /category`   with json `{"name": "categ_name", "description": "" }`
+    - `DELETE /category/:name`
 - Get, create, edit and delete brand
+    - `GET /brand/:name`
+    - `POST /brand`   with json `{"name": "categ_name", "description": "", "category": "categ_name" }`
+    - `PUT /brand`   with json `{"name": "categ_name", "description": "", "category": "categ_name" }`
+    - `DELETE /brand/:name`
 - Create and delete client
+    - `POST /client`   with json `{"name": "client_name" }`
+    - `DELETE /client/:name`
 - Add or remove brand/category from the brand/category blacklist for a client
+    - `POST /filter/:client/brand`   with json `{"name": "category_name" }`
+    - `DELETE /filter/:client/brand/:name`
+    - `POST /filter/:client/category`   with json `{"name": "category_name" }`
+    - `DELETE /filter/:client/category/:name`
+- Check if a brand is available (not blacklisted) for a client (a brand will not be available also if is of a category that is blacklisted for a client)
+    - `GET /filter/:client/brand/allowed/:name`
+- Check if a category is available (not blacklisted) for a client
+    - `GET /filter/:client/category/allowed/:name`
 
 ### What does not include
 

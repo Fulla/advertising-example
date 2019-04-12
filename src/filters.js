@@ -13,7 +13,7 @@ const routerBrand = express.Router({mergeParams:true});
 //  get to /filter/:client/brand/allowed/:name returns the brand with name = :name
 // if the brand is not blacklisted for the client
 routerBrand.get("/allowed/:name", (req, res, next) => {
-    allowedBrand(req.params.client, req.params.name)
+    allowedBrand(req.clientId, req.params.name)
     .then(
         brand => { res.send(brand) }
     )
@@ -23,8 +23,8 @@ routerBrand.get("/allowed/:name", (req, res, next) => {
 
 // post to /filter/:client/brand expects a json in the form { "name": "" }
 // and blacklists the brand with such a name for the client
-router.post("", (req, res, next) => {
-    addBrandFilter(req.params.client, req.body.name)
+routerBrand.post("", (req, res, next) => {
+    addBrandFilter(req.clientId, req.body.name)
     .then(
         brand => { res.send(brand) }
     )
@@ -34,8 +34,8 @@ router.post("", (req, res, next) => {
 
 // delete to /filter/:client/brand/:name removes the brand with name = :name
 // from the blacklist for the client
-router.delete("/:name", (req, res, next) => {
-    removeBrandFilter(req.params.client, req.params.name)
+routerBrand.delete("/:name", (req, res, next) => {
+    removeBrandFilter(req.clientId, req.params.name)
     .then(
         msg => { res.send(msg) }
     )
@@ -47,8 +47,8 @@ const routerCategory = express.Router({mergeParams:true});
 
 //  get to /filter/:client/category/allowed/:name returns the category with name = :name
 // if the category is not blacklisted for the client
-routerBrand.get("/allowed/:name", (req, res, next) => {
-    allowedCat(req.params.client, req.params.name)
+routerCategory.get("/allowed/:name", (req, res, next) => {
+    allowedCat(req.clientId, req.params.name)
     .then(
         brand => { res.send(brand) }
     )
@@ -58,8 +58,8 @@ routerBrand.get("/allowed/:name", (req, res, next) => {
 
 // post to /filter/:client/category expects a json in the form { "name": "" }
 // and blacklists the category with such a name for the client
-router.post("", (req, res, next) => {
-    addCatFilter(req.params.client, req.body.name)
+routerCategory.post("", (req, res, next) => {
+    addCatFilter(req.clientId, req.body.name)
     .then(
         brand => { res.send(brand) }
     )
@@ -69,8 +69,8 @@ router.post("", (req, res, next) => {
 
 // delete to /filter/:client/category/:name removes the category with name = :name
 // from the blacklist for the client
-router.delete("/:name", (req, res, next) => {
-    removeCatFilter(req.params.client, req.params.name)
+routerCategory.delete("/:name", (req, res, next) => {
+    removeCatFilter(req.clientId, req.params.name)
     .then(
         msg => { res.send(msg) }
     )
@@ -78,248 +78,210 @@ router.delete("/:name", (req, res, next) => {
 });
 
 
+router.use(getClient)
+
 router.use("/brand", routerBrand)
 router.use("/category", routerCategory)
+
 module.exports = router;
 
 
-function allowedBrand(clientName, name) {
+// middleware that obtains the id for a client with name :name,
+// and sets as req.clientId to be used by next handlers
+function getClient(req, res, next) {
+    clientName = req.params.client
     return Client.findOne({name: clientName})
-    .then(
-        client => {
+    .then (
+        (client) => {
             if (!client) {
-                return `No client with name ${clientName}`;
+                res.send(`No client with name ${clientName}`)
+            }
+            req.clientId = client._id
+            next()
+        }
+    )
+}
+
+
+
+function allowedBrand(client, name) {
+    return Brand.findOne({name: name})
+    .populate('category', 'name')
+    .then(
+        brand => { 
+            if (!brand) {
+                return `No brand with name ${name}`;
             }
 
-            return Brand.findOne({name: name})
+            return CategoryFilter.findOne({
+                client:client,
+                category: brand.category._id,
+            })
             .populate('category', 'name')
             .then(
-                brand => { 
-                    if (!brand) {
-                        return `No brand with name ${name}`;
+                (filter) => {
+                    if (filter) {
+                        return `Brand ${name} is from the category ${brand.category.name} that is blacklisted`
                     }
-
-                    return CategoryFilter.find({
-                        client:client._id,
-                        category: brand.category._id,
-                    })
-                    .populate('category', 'name')
-                    .then(
-                        (filter) => {
-                            if (filter) {
-                                return `Brand ${name} is from the category ${brand.category.name} that is blacklisted`
-                            }
-                            
-                            return BrandFilter.find({
-                                client:client._id,
-                                brand: brand._id,
-                            })
-                            .then(
-                                filter => {
-                                    if (filter) {
-                                        return `Brand ${name} is blacklisted`;
-                                    }
-                                    return brand.populate('category', 'name -_id');
-                                }
-                            )
-
-                        }
-                    )
-                },
-                err => { throw new Error(err) }
-            )
-        }
-    )
-}
-
-
-
-
-
-function addBrandFilter(clientName, name) {
-    return Client.findOne({name: clientName})
-    .then(
-        client => {
-            if (!client) {
-                return `No client with name ${clientName}`;
-            }
-
-            Brand.findOne({name: name})
-            .then(
-                brand => { 
-                    if (!brand) {
-                        return `No brand with name ${name}`;
-                    }
-
-                    return BrandFilter.find({
-                        client:client._id,
+                    
+                    return BrandFilter.findOne({
+                        client:client,
                         brand: brand._id,
                     })
                     .then(
                         filter => {
                             if (filter) {
-                                return `Brand ${name} is already blacklisted`;
+                                return `Brand ${name} is blacklisted`;
                             }
-                            
-                            filter = new BrandFilter({
-                                client:client._id,
-                                brand: brand._id,
-                            })
-                            return filter.save()
+                            return brand.populate('category', 'name -_id');
                         }
                     )
-                },
-                err => { throw new Error(err) }
+
+                }
             )
-        }
+        },
+        err => { throw new Error(err) }
     )
 }
 
 
-function removeBrandFilter(clientName, name) {
-    return Client.findOne({name: clientName})
+function addBrandFilter(client, name) {
+    return Brand.findOne({name: name})
     .then(
-        client => {
-            if (!client) {
-                return `No client with name ${clientName}`;
+        brand => { 
+            if (!brand) {
+                return `No brand with name ${name}`;
             }
 
-            Brand.findOne({name: name})
+            return BrandFilter.findOne({
+                client:client,
+                brand: brand._id,
+            })
             .then(
-                brand => { 
-                    if (!brand) {
-                        return `No brand with name ${name}`;
+                filter => {
+                    if (filter) {
+                        return `Brand ${name} is already blacklisted`;
                     }
-
-                    return BrandFilter.find({
-                        client:client._id,
+                    
+                    filter = new BrandFilter({
+                        client:client,
                         brand: brand._id,
                     })
-                    .then(
-                        filter => {
-                            if (!filter) {
-                                return `Brand ${name} is not blacklisted`;
-                            }
-                            
-                            return filter.remove()
-                        }
-                    )
-                },
-                err => { throw new Error(err) }
+                    return filter.save()
+                }
             )
-        }
+        },
+        err => { throw new Error(err) }
     )
 }
 
 
-
-
-function allowedCat(clientName, name) {
-    return Client.findOne({name: clientName})
+function removeBrandFilter(client, name) {
+    return Brand.findOne({name: name})
     .then(
-        client => {
-            if (!client) {
-                return `No client with name ${clientName}`;
+        brand => { 
+            if (!brand) {
+                return `No brand with name ${name}`;
             }
 
-            Category.findOne({name: name})
+            return BrandFilter.findOne({
+                client:client,
+                brand: brand._id,
+            })
             .then(
-                category => { 
-                    if (!category) {
-                        return `No category with name ${name}`;
+                filter => {
+                    if (!filter) {
+                        return `Brand ${name} is not blacklisted`;
                     }
-
-                    return CategoryFilter.find({
-                        client:client._id,
-                        category: category._id,
-                    })
-                    .then(
-                        filter => {
-                            if (filter) {
-                                return `Category ${name} is blacklisted`;
-                            }
-                            return category;
-                        }
-                    )
-                },
-                err => { throw new Error(err) }
+                    
+                    return filter.remove()
+                }
             )
-        }
+        },
+        err => { throw new Error(err) }
     )
 }
 
 
-function addCatFilter(clientName, name) {
-    return Client.findOne({name: clientName})
+function allowedCat(client, name) {
+    return Category.findOne({name: name})
     .then(
-        client => {
-            if (!client) {
-                return `No client with name ${clientName}`;
+        category => { 
+            if (!category) {
+                return `No category with name ${name}`;
             }
 
-            Category.findOne({name: name})
+            return CategoryFilter.findOne({
+                client:client,
+                category: category._id,
+            })
             .then(
-                category => { 
-                    if (!category) {
-                        return `No category with name ${name}`;
+                filter => {
+                    if (filter) {
+                        return `Category ${name} is blacklisted`;
                     }
-
-                    return CategoryFilter.find({
-                        client:client._id,
-                        category: category._id,
-                    })
-                    .then(
-                        filter => {
-                            if (filter) {
-                                return `Category ${name} is already blacklisted`;
-                            }
-                            
-                            filter = new CategoryFilter({
-                                client:client._id,
-                                category: category._id,
-                            })
-                            return filter.save()
-                        }
-                    )
-                },
-                err => { throw new Error(err) }
+                    return category;
+                }
             )
-        }
+        },
+        err => { throw new Error(err) }
     )
 }
 
 
-function removeCatFilter(clientName, name) {
-    return Client.findOne({name: clientName})
+function addCatFilter(client, name) {
+    return Category.findOne({name: name})
     .then(
-        client => {
-            if (!client) {
-                return `No client with name ${clientName}`;
+        category => { 
+            if (!category) {
+                return `No category with name ${name}`;
             }
 
-            Category.findOne({name: name})
+            return CategoryFilter.findOne({
+                client:client,
+                category: category._id,
+            })
             .then(
-                category => { 
-                    if (!category) {
-                        return `No category with name ${name}`;
+                filter => {
+                    if (filter) {
+                        return `Category ${name} is already blacklisted`;
                     }
-
-                    return CategoryFilter.find({
-                        client:client._id,
+                    
+                    filter = new CategoryFilter({
+                        client:client,
                         category: category._id,
                     })
-                    .then(
-                        filter => {
-                            if (!filter) {
-                                return `Category ${name} is not blacklisted`;
-                            }
-                            
-                            return filter.remove()
-                        }
-                    )
-                },
-                err => { throw new Error(err) }
+                    return filter.save()
+                }
             )
-        }
+        },
+        err => { throw new Error(err) }
+    )
+}
+
+
+function removeCatFilter(client, name) {
+    return Category.findOne({name: name})
+    .then(
+        category => { 
+            if (!category) {
+                return `No category with name ${name}`;
+            }
+
+            return CategoryFilter.findOne({
+                client:client,
+                category: category._id,
+            })
+            .then(
+                filter => {
+                    if (!filter) {
+                        return `Category ${name} is not blacklisted`;
+                    }
+                    
+                    return filter.remove()
+                }
+            )
+        },
+        err => { throw new Error(err) }
     )
 }

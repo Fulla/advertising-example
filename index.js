@@ -23,7 +23,7 @@ app.get('/', index)
 app.use(genericErrorHandler)
 
 function index(req, res, next) {
-    res.json('the index')
+    res.json('Welcome to Advertising service')
     next();
 }
 

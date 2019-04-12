@@ -73,8 +73,6 @@ function remove(name) {
             if (!client) {
                 return `No client with name ${name}`;
             }
-            BrandFilter.deleteMany({client: client._id}).exec();
-            CategoryFilter.deleteMany({client: client._id}).exec();
             return client.remove()
             .then(
                 () => { return `Client ${name} deleted` },

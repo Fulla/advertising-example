@@ -37,6 +37,7 @@ router.put("", (req, res, next) => {
 });
 
 // delete to /brand/:name removes the brand with name = :name
+// and all the filters for that brand
 router.delete("/:name", (req, res, next) => {
     remove(req.params.name)
     .then(
