@@ -83,10 +83,6 @@ function add(name, description, categoryName) {
                         description: description
                     })
                     return brand.save()
-                    .populate('category', 'name -_id')
-                    .then (
-                        brand => {return brand}
-                    )
                 },
                 err => { throw new Error(err) }
             )
@@ -113,8 +109,7 @@ function edit(name, description, categoryName) {
 
                     brand.description = description;
                     brand.category = category._id
-                    return category.save()
-                    .populate('category', 'name -_id')
+                    return brand.save()
                 },
                 err => { throw new Error(err) }
             )

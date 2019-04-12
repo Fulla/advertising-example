@@ -8,10 +8,7 @@ const Brand = require('./models/brand');
 router.get("/:name", (req, res, next) => {
     search(req.params.name)
     .then(
-        category => { 
-            console.log(category);
-            res.send(category);
-        }
+        category => { res.send(category) }
     )
     .catch(next);
 });
