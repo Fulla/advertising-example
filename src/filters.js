@@ -1,12 +1,14 @@
 const express = require('express');
-const router = express.Router();
 
 const Brand = require('./models/brand');
 const Category = require('./models/category');
+const Client = require('./models/client');
 const BrandFilter = require('./models/brand_filter');
 const CategoryFilter = require('./models/category_filter');
 
-const routerBrand = express.Router();
+const router = express.Router({mergeParams:true});
+
+const routerBrand = express.Router({mergeParams:true});
 
 //  get to /filter/:client/brand/allowed/:name returns the brand with name = :name
 // if the brand is not blacklisted for the client
@@ -33,7 +35,7 @@ router.post("", (req, res, next) => {
 // delete to /filter/:client/brand/:name removes the brand with name = :name
 // from the blacklist for the client
 router.delete("/:name", (req, res, next) => {
-    removeBrandFilter(req.params.name)
+    removeBrandFilter(req.params.client, req.params.name)
     .then(
         msg => { res.send(msg) }
     )
@@ -41,7 +43,7 @@ router.delete("/:name", (req, res, next) => {
 });
 
 
-const routerCategory = express.Router();
+const routerCategory = express.Router({mergeParams:true});
 
 //  get to /filter/:client/category/allowed/:name returns the category with name = :name
 // if the category is not blacklisted for the client
@@ -68,7 +70,7 @@ router.post("", (req, res, next) => {
 // delete to /filter/:client/category/:name removes the category with name = :name
 // from the blacklist for the client
 router.delete("/:name", (req, res, next) => {
-    removeCatFilter(req.params.name)
+    removeCatFilter(req.params.client, req.params.name)
     .then(
         msg => { res.send(msg) }
     )
@@ -82,15 +84,15 @@ module.exports = router;
 
 
 function allowedBrand(clientName, name) {
-    return ClientRect.findOne({name: client})
+    return Client.findOne({name: clientName})
     .then(
         client => {
             if (!client) {
                 return `No client with name ${clientName}`;
             }
 
-            Brand.findOne({name: name})
-            .populate('category', 'name -_id')
+            return Brand.findOne({name: name})
+            .populate('category', 'name')
             .then(
                 brand => { 
                     if (!brand) {
@@ -99,13 +101,13 @@ function allowedBrand(clientName, name) {
 
                     return CategoryFilter.find({
                         client:client._id,
-                        category: brand.category,
+                        category: brand.category._id,
                     })
                     .populate('category', 'name')
                     .then(
                         (filter) => {
                             if (filter) {
-                                return `Brand ${name} is from the category ${filter.category.name} that is blacklisted`
+                                return `Brand ${name} is from the category ${brand.category.name} that is blacklisted`
                             }
                             
                             return BrandFilter.find({
@@ -117,7 +119,7 @@ function allowedBrand(clientName, name) {
                                     if (filter) {
                                         return `Brand ${name} is blacklisted`;
                                     }
-                                    return brand;
+                                    return brand.populate('category', 'name -_id');
                                 }
                             )
 
@@ -135,7 +137,7 @@ function allowedBrand(clientName, name) {
 
 
 function addBrandFilter(clientName, name) {
-    return ClientRect.findOne({name: client})
+    return Client.findOne({name: clientName})
     .then(
         client => {
             if (!client) {
@@ -175,7 +177,7 @@ function addBrandFilter(clientName, name) {
 
 
 function removeBrandFilter(clientName, name) {
-    return ClientRect.findOne({name: client})
+    return Client.findOne({name: clientName})
     .then(
         client => {
             if (!client) {
@@ -213,7 +215,7 @@ function removeBrandFilter(clientName, name) {
 
 
 function allowedCat(clientName, name) {
-    return ClientRect.findOne({name: clientName})
+    return Client.findOne({name: clientName})
     .then(
         client => {
             if (!client) {
@@ -248,7 +250,7 @@ function allowedCat(clientName, name) {
 
 
 function addCatFilter(clientName, name) {
-    return ClientRect.findOne({name: client})
+    return Client.findOne({name: clientName})
     .then(
         client => {
             if (!client) {
@@ -288,7 +290,7 @@ function addCatFilter(clientName, name) {
 
 
 function removeCatFilter(clientName, name) {
-    return ClientRect.findOne({name: client})
+    return Client.findOne({name: clientName})
     .then(
         client => {
             if (!client) {
